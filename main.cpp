@@ -135,7 +135,7 @@ template <> struct fmt::formatter<metrics_t> {
   auto format(const metrics_t &m, FormatContext &ctx) {
     return format_to(ctx.out(),
                      "Uniformity({:.4f}, {:.4f}) Bitaliasing({:.4f}, {:.4f}) "
-                     "nCRP({}, {:.4f} %)",
+                     "nCRP({}, {:02.2f} %)",
                      m.uniformity_mu, m.uniformity_sd, m.bitaliasing_mu,
                      m.bitaliasing_sd, m.nCRP,
                      ((float)m.nCRP / PUF_TABLE.n_cols) * 100);
@@ -260,9 +260,23 @@ float calculate_fitness(metrics_t metrics) {
   return pow((max_fitness - fitness) / max_fitness, 4);
 }
 
+void usage() {
+        std::cout << "usage genetic_puf -f <crp_table>.csv \n"
+                  << "                  -o: path to output file\n"
+                  << "                  -g: number of generations\n"
+                  << "                  -t: threshold for bitaliasing\n"
+                  << "                  -p: population size\n"
+                  << "                  -v: verbose\n";
+}
+
 int main(int argc, char **argv) {
   CONFIG = parse_args(argc, argv);
 
+  if (CONFIG.in_file == "" || CONFIG.out_file == "") {
+          usage();
+          return(1);
+  }
+  
   PUF_TABLE.load(CONFIG.in_file, csv_ascii);
 
   BITALIAS_LUT = conv_to<fvec>::from(mean(PUF_TABLE, 0));
@@ -287,8 +301,6 @@ int main(int argc, char **argv) {
 #pragma omp parallel for shared(metrics_table, fitness_table, PUF_TABLE)       \
     schedule(runtime)
     for (int iter = 0; iter < CONFIG.population_size; ++iter) {
-      // auto genome = conv_to<uvec>::from (population.row (iter));
-      // uvec crps = find (genome == 1);
       uvec crps = find(population.row(iter) == 1);
 
       metrics_t m = calculate_metrics(PUF_TABLE, crps);
