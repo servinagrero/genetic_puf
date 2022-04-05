@@ -122,6 +122,10 @@ struct metrics_t {
   float bitaliasing_mu;
   /// Bitaliasing standard deviation
   float bitaliasing_sd;
+  /// Reliability mean
+  float intraHD_mu;
+  /// Reliability standard deviation
+  float intraHD_sd;
   /// Number of valid CRPs
   int nCRP;
 };
@@ -134,7 +138,7 @@ template <> struct fmt::formatter<metrics_t> {
   template <typename FormatContext>
   auto format(const metrics_t &m, FormatContext &ctx) {
     return format_to(ctx.out(),
-                     "Uniformity({:.4f}, {:.4f}) Bitaliasing({:.4f}, {:.4f}) "
+                     "U({:.4f}, {:.4f}) B({:.4f}, {:.4f}) "
                      "nCRP({}, {:02.2f} %)",
                      m.uniformity_mu, m.uniformity_sd, m.bitaliasing_mu,
                      m.bitaliasing_sd, m.nCRP,
@@ -219,6 +223,9 @@ metrics_t calculate_metrics(mat &puf_table, uvec &vec) {
   metrics.bitaliasing_mu = mean(sum_cols);
   metrics.bitaliasing_sd = stddev(sum_cols);
 
+  metrics.intraHD_mu = 0;
+  metrics.intraHD_sd = 0;
+
   metrics.nCRP = vec.size();
 
   // uvec interHD_values(pairs_lut.size(), fill::zeros);
@@ -255,28 +262,29 @@ float calculate_fitness(metrics_t metrics) {
 
   fitness += abs(metrics.uniformity_mu - 0.5) + metrics.uniformity_sd;
   fitness += abs(metrics.bitaliasing_mu - 0.5) + metrics.bitaliasing_sd;
+  // fitness += metrics.intraHD_mu + metrics.intraHD_sd;
   fitness += (PUF_TABLE.n_cols - metrics.nCRP) / PUF_TABLE.n_cols;
 
-  return pow((max_fitness - fitness) / max_fitness, 4);
+  return pow((max_fitness - fitness) / max_fitness, 2);
 }
 
 void usage() {
-        std::cout << "usage genetic_puf -f <crp_table>.csv \n"
-                  << "                  -o: path to output file\n"
-                  << "                  -g: number of generations\n"
-                  << "                  -t: threshold for bitaliasing\n"
-                  << "                  -p: population size\n"
-                  << "                  -v: verbose\n";
+  std::cout << "usage genetic_puf -f <crp_table>.csv \n"
+            << "                  -o: path to output file\n"
+            << "                  -g: number of generations\n"
+            << "                  -t: threshold for bitaliasing\n"
+            << "                  -p: population size\n"
+            << "                  -v: verbose\n";
 }
 
 int main(int argc, char **argv) {
   CONFIG = parse_args(argc, argv);
 
   if (CONFIG.in_file == "" || CONFIG.out_file == "") {
-          usage();
-          return(1);
+    usage();
+    return (1);
   }
-  
+
   PUF_TABLE.load(CONFIG.in_file, csv_ascii);
 
   BITALIAS_LUT = conv_to<fvec>::from(mean(PUF_TABLE, 0));
@@ -354,11 +362,17 @@ int main(int argc, char **argv) {
   metrics_t raw_metrics = calculate_metrics(PUF_TABLE, complete);
   fmt::print("Original:\n");
   fmt::print("{}\n", raw_metrics);
-  fmt::print("Fitness {}\n", calculate_fitness(raw_metrics));
+  fmt::print("Fitness {}\n\n", calculate_fitness(raw_metrics));
 
   fmt::print("Solution achieved:\n");
   fmt::print("{}\n", highest_metrics);
-  fmt::print("Fitness {}\n", highest_fitness);
+  fmt::print("Fitness {}\n\n", highest_fitness);
+
+  fmt::print("Dummy bitaliasing solution:\n");
+  uvec sel_dummy = find(BITALIAS_LUT <= CONFIG.bitalias_thresh);
+  metrics_t metrics_dummy = calculate_metrics(PUF_TABLE, sel_dummy);
+  fmt::print("{}\n", metrics_dummy);
+  fmt::print("Fitness {}\n\n", calculate_fitness(metrics_dummy));
 
   fmt::print("Printing solution to file: {}.\n", CONFIG.out_file);
   solution.save(CONFIG.out_file, csv_ascii);

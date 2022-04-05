@@ -13,6 +13,7 @@ find_package(fmt REQUIRED)
 add_executable(${PROJECT_NAME} main.cpp)
 
 target_link_libraries(${PROJECT_NAME} PRIVATE fmt::fmt)
+target_link_libraries(${PROJECT_NAME} PRIVATE armadillo)
 
 find_package(OpenMP)
 if(OpenMP_CXX_FOUND)
