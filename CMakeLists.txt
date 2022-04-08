@@ -4,7 +4,7 @@ project(genetic_puf VERSION 1.0)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 
-# set(CMAKE_CXX_FLAGS "-O2")
+set(CMAKE_CXX_FLAGS "-O2 -ffast-math")
 # set(CMAKE_CXX_CLANG_TIDY "clang-tidy;-checks=*")
 
 include_directories(".")

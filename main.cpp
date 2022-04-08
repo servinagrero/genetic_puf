@@ -20,7 +20,6 @@
 #include <stdexcept>
 #include <string>
 #include <string_view>
-#include <tuple>
 #include <vector>
 
 #include <armadillo>
@@ -42,14 +41,6 @@ struct options_t
   int num_generations;
 };
 
-/**
- * @brief Parse the option from stdin.
- *
- * @param argc Number of arguments passed
- * @param argv The argumntes passed as strings
- *
- * @returns Struct containing the parsed options.
- */
 options_t
 parse_args(int argc, char** argv)
 {
@@ -92,22 +83,6 @@ parse_args(int argc, char** argv)
   return options;
 }
 
-/**
- * @brief Compute the number of combinations with repetition of n elements
- *
- * param n Maximum number to create combinations.
- *
- * @return number of pairs.
- */
-// void compute_pairs(int n)
-// {
-// 	for (int i = 0; i < n; ++i) {
-// 		for (int j = i + 1; j < n; ++j) {
-// 			pairs_lut.push_back(std::make_tuple(i, j));
-// 		}
-// 	}
-// }
-
 void
 usage()
 {
@@ -123,35 +98,18 @@ int
 main(int argc, char** argv)
 {
   // options_t options = parse_args(argc, argv);
-
+        
   mat crp_table;
-  crp_table.load("/home/vinagrero/M_bits_station.csv", csv_ascii);
+  crp_table.load("/home/vinagres/Programming/dumps_thesis/32/M_bits.csv", csv_ascii);
 
+  cube crps(crp_table.n_rows, crp_table.n_cols, 10, fill::ones);
+  crps.slice(0) = crp_table;
+  
   fmt::print("crp_table: [{}, {}]\n", crp_table.n_rows, crp_table.n_cols);
 
-  Solver solver = Solver(crp_table, 30, 0.05);
-
+  Solver solver = Solver(crps, 5, 0.1);
   solver.optimize(50);
   auto solution = solver.best_genome();
-
-  // uvec complete(crp_table.n_cols, fill::ones);
-  // for (size_t i = 0; i < complete.size(); ++i)
-  //         complete.at(i) = i;
-
-  //   metrics_t raw_metrics = solver.calculate_metrics(complete);
-  //   fmt::print("Original:\n");
-  //   fmt::print("{}\n", raw_metrics);
-  //   fmt::print("Fitness {}\n\n", solver.calculate_fitness(raw_metrics));
-
-  // fmt::print("Solution achieved:\n");
-  // fmt::print("{}\n", highest_metrics);
-  // fmt::print("Fitness {}\n\n", highest_fitness);
-
-  // fmt::print("Dummy bitaliasing solution:\n");
-  // uvec sel_dummy = find(BITALIAS_LUT <= CONFIG.bitalias_thresh);
-  // metrics_t metrics_dummy = calculate_metrics(solver.crp_table, sel_dummy);
-  // fmt::print("{}\n", metrics_dummy);
-  // fmt::print("Fitness {}\n\n", solver.calculate_fitness(metrics_dummy));
 
   fmt::print("Printing solution to file: {}.\n", "./genome.csv");
   solution.save("./genome.csv", csv_ascii);
